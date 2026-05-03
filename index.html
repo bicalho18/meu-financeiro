@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Finanças Pro</title>
+    
+    <!-- Configurações para iPhone (Web App) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Finanças">
+    
+    <!-- Ícone que aparecerá na tela do iPhone -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/240/money-bag.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --ios-blue: #007AFF; --ios-bg: #F2F2F7; }
+        body { 
+            background-color: var(--ios-bg); 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ios-card { background: white; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+        .safe-area-bottom { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
+        
+        .ios-switch { width: 51px; height: 31px; appearance: none; background: #e9e9ea; border-radius: 16px; position: relative; transition: .3s; outline: none; }
+        .ios-switch:checked { background: #34c759; }
+        .ios-switch::before { content: ''; width: 27px; height: 27px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: .3s; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+        .ios-switch:checked::before { transform: translateX(20px); }
+        
+        .active-tab { color: var(--ios-blue) !important; font-weight: 700; }
+    </style>
+</head>
+<body class="pb-32">
+
+    <!-- Header iOS -->
+    <header class="sticky top-0 z-40 bg-[#F2F2F7]/80 backdrop-blur-xl p-6 pb-2 border-b border-gray-200 pt-12">
+        <div class="flex justify-between items-end">
+            <div>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5" id="date-display"></p>
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">Carteira</h1>
+            </div>
+            <button onclick="resetData()" class="bg-gray-200/50 p-2 rounded-full active:bg-gray-300">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="p-4">
+        <!-- ABA: INÍCIO -->
+        <div id="tab-resumo" class="tab-pane">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="ios-card p-4">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase">Receita</span>
+                    <p class="text-xl font-black text-green-600" id="res-entradas">R$ 0,00</p>
+                </div>
+                <div class="ios-card p-4">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase">Saída Total</span>
+                    <p class="text-xl font-black text-red-500" id="res-saidas">R$ 0,00</p>
+                </div>
+            </div>
+            
+            <div class="ios-card p-6 flex flex-col items-center">
+                <h3 class="text-xs font-bold text-gray-400 uppercase self-start mb-6">Uso do Dinheiro</h3>
+                <canvas id="chart" style="max-height: 200px;"></canvas>
+            </div>
+        </div>
+
+        <!-- ABA: CONTAS FIXAS -->
+        <div id="tab-fixas" class="tab-pane hidden">
+            <div class="flex justify-between items-center mb-4 px-1">
+                <h2 class="text-2xl font-bold">Fixas</h2>
+                <span class="text-[10px] text-blue-600 font-bold uppercase bg-blue-50 px-2 py-1 rounded-md">Toque p/ Editar</span>
+            </div>
+            <div id="lista-fixas" class="space-y-3"></div>
+        </div>
+
+        <!-- ABA: GASTOS VARIÁVEIS -->
+        <div id="tab-gastos" class="tab-pane hidden">
+            <h2 class="text-2xl font-bold mb-4 px-1">Novo Gasto</h2>
+            <div class="ios-card p-5 space-y-4">
+                <input type="text" id="g-desc" placeholder="Ex: Farmácia, Ifood..." class="w-full bg-gray-100 p-4 rounded-2xl outline-none font-medium">
+                <input type="number" id="g-val" placeholder="0,00" class="w-full bg-gray-100 p-4 rounded-2xl outline-none font-black text-xl">
+                <button onclick="addGasto()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold shadow-xl shadow-blue-200 active:opacity-70 transition-opacity">Lançar Gasto</button>
+            </div>
+            <div class="ios-card overflow-hidden mt-6" id="lista-variaveis"></div>
+        </div>
+
+        <!-- ABA: TICKET -->
+        <div id="tab-ticket" class="tab-pane hidden">
+            <h2 class="text-2xl font-bold mb-4 px-1">Ticket</h2>
+            <div class="ios-card p-10 bg-gradient-to-br from-blue-700 to-indigo-500 text-white text-center shadow-2xl shadow-blue-200">
+                <p class="text-[10px] font-bold opacity-80 uppercase mb-2">Saldo Atual</p>
+                <h2 class="text-5xl font-black" id="ticket-val">R$ 0,00</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mt-6">
+                <button onclick="changeTicket(true)" class="ios-card p-6 flex flex-col items-center gap-2 active:bg-gray-50">
+                    <span class="font-bold text-gray-700 text-sm">Recarga</span>
+                </button>
+                <button onclick="changeTicket(false)" class="ios-card p-6 flex flex-col items-center gap-2 active:bg-gray-50">
+                    <span class="font-bold text-gray-700 text-sm">Mercado</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ABA: RESERVA -->
+        <div id="tab-reserva" class="tab-pane hidden">
+            <h2 class="text-2xl font-bold mb-4 px-1">Reserva</h2>
+            <div class="ios-card p-8 border-t-8 border-yellow-400 shadow-md">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Total Guardado</p>
+                <h2 class="text-4xl font-black text-gray-800" id="reserva-val">R$ 0,00</h2>
+            </div>
+            <div class="ios-card p-5 mt-6 flex gap-3">
+                <input type="number" id="res-val" placeholder="R$ 0,00" class="flex-1 bg-gray-100 p-4 rounded-2xl outline-none font-bold">
+                <button onclick="addReserva()" class="bg-yellow-500 text-white px-8 rounded-2xl font-bold active:opacity-70">Salvar</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Nav Bottom -->
+    <nav class="fixed bottom-0 w-full bg-white/90 backdrop-blur-2xl border-t border-gray-200 flex justify-around pt-4 safe-area-bottom z-50">
+        <button onclick="nav('resumo')" id="nav-resumo" class="flex flex-col items-center w-full active-tab text-gray-400">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span class="text-[10px] mt-1 font-bold">Início</span>
+        </button>
+        <button onclick="nav('fixas')" id="nav-fixas" class="flex flex-col items-center w-full text-gray-400">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            <span class="text-[10px] mt-1 font-bold">Fixas</span>
+        </button>
+        <button onclick="nav('gastos')" id="nav-gastos" class="flex flex-col items-center w-full text-gray-400">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            <span class="text-[10px] mt-1 font-bold">Lançar</span>
+        </button>
+        <button onclick="nav('ticket')" id="nav-ticket" class="flex flex-col items-center w-full text-gray-400">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+            <span class="text-[10px] mt-1 font-bold">Ticket</span>
+        </button>
+        <button onclick="nav('reserva')" id="nav-reserva" class="flex flex-col items-center w-full text-gray-400">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+            <span class="text-[10px] mt-1 font-bold">Reserva</span>
+        </button>
+    </nav>
+
+    <script>
+        let data = {
+            fixas: [
+                { id:1, n: 'Luz', v: 250, p: false }, { id:2, n: 'Água', v: 80, p: false },
+                { id:3, n: 'Internet', v: 120, p: false }, { id:4, n: 'Seguro Carro', v: 210, p: false },
+                { id:5, n: 'Gasolina', v: 450, p: false }, { id:6, n: 'Telefone Vivo', v: 70, p: false },
+                { id:7, n: 'Mens. Tropical', v: 150, p: false }, { id:8, n: 'Poupança', v: 500, p: false }
+            ],
+            variaveis: [], ticket: 0, reserva: 0, salario: 6000
+        };
+
+        function nav(id) {
+            document.querySelectorAll('.tab-pane').forEach(t => t.classList.add('hidden'));
+            document.getElementById('tab-'+id).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab', 'text-blue-600'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.add('text-gray-400'));
+            document.getElementById('nav-'+id).classList.add('active-tab', 'text-blue-600');
+            window.scrollTo(0,0);
+        }
+
+        function save() { 
+            localStorage.setItem('fin_v_final_ios', JSON.stringify(data)); 
+            render(); 
+        }
+
+        function load() {
+            const s = localStorage.getItem('fin_v_final_ios');
+            if(s) data = JSON.parse(s);
+            render();
+        }
+
+        function addGasto() {
+            const d = document.getElementById('g-desc').value;
+            const v = parseFloat(document.getElementById('g-val').value);
+            if(d && v) {
+                data.variaveis.push({ d, v, t: new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'short'}) });
+                document.getElementById('g-desc').value = '';
+                document.getElementById('g-val').value = '';
+                save();
+                nav('resumo');
+            }
+        }
+
+        function editFixa(id) {
+            const c = data.fixas.find(x => x.id === id);
+            const nv = prompt(`Novo valor para ${c.n}:`, c.v);
+            if(nv !== null) { c.v = parseFloat(nv) || 0; save(); }
+        }
+
+        function changeTicket(inc) {
+            const v = prompt(inc ? "Valor da recarga:" : "Quanto gastou?");
+            if(v) { data.ticket += (inc ? 1 : -1) * parseFloat(v); save(); }
+        }
+
+        function addReserva() {
+            const v = parseFloat(document.getElementById('res-val').value);
+            if(v) { data.reserva += v; document.getElementById('res-val').value = ''; save(); }
+        }
+
+        function render() {
+            document.getElementById('date-display').innerText = new Date().toLocaleDateString('pt-BR', {month:'long', day:'numeric'}).toUpperCase();
+            const lf = document.getElementById('lista-fixas'); lf.innerHTML = '';
+            data.fixas.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'ios-card p-4 flex justify-between items-center';
+                div.innerHTML = `<div onclick="editFixa(${c.id})" class="flex-1"><p class="font-bold text-gray-800">${c.n}</p><p class="text-[10px] text-gray-400 font-bold">R$ ${c.v.toFixed(2)}</p></div>
+                                 <input type="checkbox" class="ios-switch" ${c.p ? 'checked' : ''} onchange="data.fixas.find(x=>x.id===${c.id}).p = !data.fixas.find(x=>x.id===${c.id}).p; save()">`;
+                lf.appendChild(div);
+            });
+
+            const lv = document.getElementById('lista-variaveis'); lv.innerHTML = '';
+            data.variaveis.slice().reverse().slice(0, 5).forEach(v => {
+                lv.innerHTML += `<div class="p-4 border-b border-gray-50 flex justify-between items-center">
+                    <div><p class="text-sm font-bold text-gray-700">${v.d}</p><p class="text-[9px] text-gray-400 uppercase font-black">${v.t}</p></div>
+                    <div class="text-sm font-black text-red-500">- R$ ${v.v.toFixed(2)}</div></div>`;
+            });
+
+            const totalFixas = data.fixas.reduce((a,c)=>a+c.v,0);
+            const totalVar = data.variaveis.reduce((a,c)=>a+c.v,0);
+            document.getElementById('res-entradas').innerText = `R$ ${data.salario.toFixed(2)}`;
+            document.getElementById('res-saidas').innerText = `R$ ${(totalFixas+totalVar).toFixed(2)}`;
+            document.getElementById('ticket-val').innerText = `R$ ${data.ticket.toFixed(2)}`;
+            document.getElementById('reserva-val').innerText = `R$ ${data.reserva.toFixed(2)}`;
+            updateChart(totalFixas, totalVar);
+        }
+
+        let chart;
+        function updateChart(f, v) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { datasets: [{ data: [f, v], backgroundColor: ['#007AFF', '#E5E5EA'], borderWidth: 0, borderRadius: 10 }] },
+                options: { cutout: '85%', plugins: { legend: { display: false } } }
+            });
+        }
+
+        function resetData() { if(confirm("Deseja apagar tudo?")) { localStorage.clear(); location.reload(); } }
+        window.onload = load;
+    </script>
+</body>
+</html>
